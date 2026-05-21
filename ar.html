@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Smart Lab AR</title>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; font-family: sans-serif; background: #000; }
+
+    #overlay {
+      position: fixed; top: 0; left: 0; width: 100%; z-index: 999;
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+      pointer-events: none;
+    }
+
+    .overlay-title {
+      font-size: 13px; font-weight: 700; color: #fff;
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+
+    .overlay-hint {
+      font-size: 11px; color: rgba(255,255,255,0.6);
+    }
+
+    #status-pill {
+      font-size: 11px; color: #fff;
+      background: rgba(0,212,170,0.25);
+      border: 1px solid rgba(0,212,170,0.5);
+      padding: 4px 12px; border-radius: 20px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .pill-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #00d4aa;
+      animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    #hint-bottom {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 999; pointer-events: none;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px; padding: 8px 20px;
+      font-size: 12px; color: rgba(255,255,255,0.7);
+      text-align: center; white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="overlay">
+    <div>
+      <div class="overlay-title">Smart Lab AR</div>
+      <div class="overlay-hint">Apunta al marcador Hiro</div>
+    </div>
+    <div id="status-pill">
+      <div class="pill-dot"></div>
+      <span id="status-text">Conectando...</span>
+    </div>
+  </div>
+
+  <div id="hint-bottom">Imprime el marcador Hiro y apunta la cámara</div>
+
+  <a-scene
+    embedded
+    arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+    vr-mode-ui="enabled: false"
+    renderer="logarithmicDepthBuffer: true; precision: medium;"
+    style="width:100vw; height:100vh;">
+
+    <!-- Marcador Hiro — imprime este marcador en papel -->
+    <a-marker preset="hiro" id="marker">
+
+      <!-- Panel de fondo -->
+      <a-rounded
+        position="0 0.5 0"
+        rotation="-90 0 0"
+        width="3.2" height="2.2"
+        radius="0.12"
+        color="#0a0e1a"
+        opacity="0.92">
+      </a-rounded>
+
+      <!-- Borde superior de color -->
+      <a-box
+        position="0 0.501 0.95"
+        rotation="-90 0 0"
+        width="3.2" height="0.08" depth="0.01"
+        color="#00d4aa">
+      </a-box>
+
+      <!-- Título -->
+      <a-text
+        id="ar-title"
+        value="SMART LAB MONITOR"
+        position="0 0.52 0.82"
+        rotation="-90 0 0"
+        align="center"
+        color="#00d4aa"
+        width="3"
+        font="https://cdn.aframe.io/fonts/mozillavr.fnt">
+      </a-text>
+
+      <!-- Temperatura - label -->
+      <a-text
+        value="TEMPERATURA"
+        position="-1.1 0.52 0.45"
+        rotation="-90 0 0"
+        align="center"
+        color="#64748b"
+        width="1.8">
+      </a-text>
+      <!-- Temperatura - valor -->
+      <a-text
+        id="ar-temp"
+        value="-- °C"
+        position="-1.1 0.52 0.18"
+        rotation="-90 0 0"
+        align="center"
+        color="#e2e8f0"
+        width="2.8">
+      </a-text>
+      <!-- Temperatura - estado -->
+      <a-text
+        id="ar-temp-status"
+        value="Normal"
+        position="-1.1 0.52 -0.1"
+        rotation="-90 0 0"
+        align="center"
+        color="#00d4aa"
+        width="2">
+      </a-text>
+
+      <!-- Divider izquierdo -->
+      <a-box
+        position="-0.3 0.52 0.2"
+        rotation="-90 0 0"
+        width="0.02" height="0.9" depth="0.01"
+        color="#1e2d4a">
+      </a-box>
+
+      <!-- Humedad - label -->
+      <a-text
+        value="HUMEDAD"
+        position="0.65 0.52 0.45"
+        rotation="-90 0 0"
+        align="center"
+        color="#64748b"
+        width="1.8">
+      </a-text>
+      <!-- Humedad - valor -->
+      <a-text
+        id="ar-hum"
+        value="-- %"
+        position="0.65 0.52 0.18"
+        rotation="-90 0 0"
+        align="center"
+        color="#e2e8f0"
+        width="2.8">
+      </a-text>
+      <!-- Humedad - estado -->
+      <a-text
+        id="ar-hum-status"
+        value="Normal"
+        position="0.65 0.52 -0.1"
+        rotation="-90 0 0"
+        align="center"
+        color="#00d4aa"
+        width="2">
+      </a-text>
+
+      <!-- Divider derecho -->
+      <a-box
+        position="1.25 0.52 0.2"
+        rotation="-90 0 0"
+        width="0.02" height="0.9" depth="0.01"
+        color="#1e2d4a">
+      </a-box>
+
+      <!-- Calidad del aire - label -->
+      <a-text
+        value="CALIDAD AIRE"
+        position="1.95 0.52 0.45"
+        rotation="-90 0 0"
+        align="center"
+        color="#64748b"
+        width="1.8">
+      </a-text>
+      <!-- Calidad - valor -->
+      <a-text
+        id="ar-aire"
+        value="-- ppm"
+        position="1.95 0.52 0.18"
+        rotation="-90 0 0"
+        align="center"
+        color="#e2e8f0"
+        width="2.5">
+      </a-text>
+      <!-- Calidad - estado -->
+      <a-text
+        id="ar-aire-status"
+        value="Normal"
+        position="1.95 0.52 -0.1"
+        rotation="-90 0 0"
+        align="center"
+        color="#00d4aa"
+        width="2">
+      </a-text>
+
+      <!-- Línea inferior -->
+      <a-box
+        position="0 0.52 -0.55"
+        rotation="-90 0 0"
+        width="3.2" height="0.015" depth="0.01"
+        color="#1e2d4a">
+      </a-box>
+
+      <!-- Footer -->
+      <a-text
+        id="ar-footer"
+        value="Digitales III · ESP32 + IoT + AR"
+        position="0 0.52 -0.76"
+        rotation="-90 0 0"
+        align="center"
+        color="#334155"
+        width="2.8">
+      </a-text>
+
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+
+<script>
+  // ── FIREBASE ─────────────────────────────────────────────────
+  const firebaseConfig = {
+    apiKey: "AIzaSyDWN9YbdTau_mUEQs50A2fmxtMeGIe4qWo",
+    authDomain: "smart-lab-monitor-d758a.firebaseapp.com",
+    databaseURL: "https://smart-lab-monitor-d758a-default-rtdb.firebaseio.com",
+    projectId: "smart-lab-monitor-d758a",
+    storageBucket: "smart-lab-monitor-d758a.firebasestorage.app",
+    messagingSenderId: "89073383808",
+    appId: "1:89073383808:web:26ea913952d586af752965"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // ── COLORES POR ESTADO ────────────────────────────────────────
+  function colorEstado(estado) {
+    return { ok: '#00d4aa', warn: '#f59e0b', danger: '#ef4444' }[estado];
+  }
+
+  function labelEstado(estado) {
+    return { ok: 'Normal', warn: 'Precaucion', danger: 'PELIGRO' }[estado];
+  }
+
+  function estadoTemp(v)  { return v > 35 ? 'danger' : v > 30 ? 'warn' : 'ok'; }
+  function estadoHum(v)   { return v > 80 ? 'warn' : 'ok'; }
+  function estadoAire(v)  { return v > 800 ? 'danger' : v > 500 ? 'warn' : 'ok'; }
+
+  // ── LISTENER FIREBASE ─────────────────────────────────────────
+  db.ref('/laboratorio').on('value', snap => {
+    const data = snap.val();
+    if (!data) return;
+
+    const temp = parseFloat(data.temperatura) || 0;
+    const hum  = parseFloat(data.humedad)     || 0;
+    const aire = parseFloat(data.calidad_aire) || 0;
+
+    // Actualizar texto AR
+    document.getElementById('ar-temp').setAttribute('value', temp.toFixed(1) + ' C');
+    document.getElementById('ar-hum').setAttribute('value',  hum.toFixed(0)  + ' %');
+    document.getElementById('ar-aire').setAttribute('value', Math.round(aire) + ' ppm');
+
+    // Estados y colores
+    const eT = estadoTemp(temp);
+    const eH = estadoHum(hum);
+    const eA = estadoAire(aire);
+
+    document.getElementById('ar-temp-status').setAttribute('value', labelEstado(eT));
+    document.getElementById('ar-temp-status').setAttribute('color', colorEstado(eT));
+
+    document.getElementById('ar-hum-status').setAttribute('value', labelEstado(eH));
+    document.getElementById('ar-hum-status').setAttribute('color', colorEstado(eH));
+
+    document.getElementById('ar-aire-status').setAttribute('value', labelEstado(eA));
+    document.getElementById('ar-aire-status').setAttribute('color', colorEstado(eA));
+
+    // Status pill
+    document.getElementById('status-text').textContent = 'En linea';
+
+    // Timestamp en footer
+    const hora = new Date().toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    document.getElementById('ar-footer').setAttribute('value', 'Actualizado: ' + hora);
+  });
+</script>
+</body>
+</html>

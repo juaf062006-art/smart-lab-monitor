@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Lab Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #1e2d4a;
+    --accent: #00d4aa;
+    --accent2: #3b82f6;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .logo h1 {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+
+  .logo span {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 20px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.4s;
+  }
+
+  .status-dot.online { background: var(--accent); animation: pulse 2s infinite; }
+
+  /* Main layout */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* Cards grid */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.2s;
+  }
+
+  .card:hover { transform: translateY(-2px); }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    transition: background 0.4s;
+  }
+
+  .card.warn::before { background: var(--warn); }
+  .card.danger::before { background: var(--danger); }
+
+  .card-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .card-value {
+    font-family: var(--mono);
+    font-size: 38px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    transition: color 0.4s;
+  }
+
+  .card-value.warn { color: var(--warn); }
+  .card-value.danger { color: var(--danger); }
+
+  .card-unit {
+    font-size: 16px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  .card-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(0,212,170,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,212,170,0.2);
+    transition: all 0.4s;
+  }
+
+  .card-status.warn {
+    background: rgba(245,158,11,0.1);
+    color: var(--warn);
+    border-color: rgba(245,158,11,0.2);
+  }
+
+  .card-status.danger {
+    background: rgba(239,68,68,0.1);
+    color: var(--danger);
+    border-color: rgba(239,68,68,0.2);
+  }
+
+  /* Alert banner */
+  #alert-banner {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 12px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: #fca5a5;
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .alert-icon {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--danger);
+    animation: pulse 1s infinite;
+    flex-shrink: 0;
+  }
+
+  /* Chart section */
+  .chart-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 200px;
+  }
+
+  /* Last update */
+  .last-update {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  /* Connecting state */
+  .connecting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 60px 0;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 600px) {
+    header { padding: 16px 20px; }
+    main { padding: 20px 16px; }
+    .card-value { font-size: 30px; }
+    .logo h1 { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    <div>
+      <h1>SMART LAB MONITOR</h1>
+      <span>Industria 4.0 — ESP32 + IoT</span>
+    </div>
+  </div>
+  <div class="status-badge">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Conectando...</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Alerta -->
+  <div id="alert-banner">
+    <div class="alert-icon"></div>
+    <span id="alert-text">Alerta detectada</span>
+  </div>
+
+  <!-- Cards -->
+  <div class="cards" id="cards-container">
+    <div class="connecting">
+      <div class="spinner"></div>
+      <span>Esperando datos del ESP32...</span>
+    </div>
+  </div>
+
+  <!-- Gráfica temperatura -->
+  <div class="chart-section">
+    <div class="section-header">
+      <span class="section-title">Temperatura — últimas lecturas</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="tempChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Gráfica humedad -->
+  <div class="chart-section">
+    <div class="section-header">
+      <span class="section-title">Humedad — últimas lecturas</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="humChart"></canvas>
+    </div>
+  </div>
+
+  <div class="last-update" id="last-update">—</div>
+
+</main>
+
+<footer>
+  Smart Lab Monitor · Digitales III · ESP32 + Firebase + AR.js
+</footer>
+
+<script>
+  // ── FIREBASE CONFIG ──────────────────────────────────────────
+  const firebaseConfig = {
+    apiKey: "AIzaSyDWN9YbdTau_mUEQs50A2fmxtMeGIe4qWo",
+    authDomain: "smart-lab-monitor-d758a.firebaseapp.com",
+    databaseURL: "https://smart-lab-monitor-d758a-default-rtdb.firebaseio.com",
+    projectId: "smart-lab-monitor-d758a",
+    storageBucket: "smart-lab-monitor-d758a.firebasestorage.app",
+    messagingSenderId: "89073383808",
+    appId: "1:89073383808:web:26ea913952d586af752965"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // ── HISTORIAL ────────────────────────────────────────────────
+  const MAX_HIST = 20;
+  let labels = [], tempHist = [], humHist = [];
+
+  // ── GRÁFICAS ─────────────────────────────────────────────────
+  const chartOpts = (color) => ({
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#1e2d4a' }, ticks: { color: '#64748b', font: { family: 'Space Mono', size: 10 } } },
+      y: { grid: { color: '#1e2d4a' }, ticks: { color: '#64748b', font: { family: 'Space Mono', size: 10 } } }
+    },
+    elements: { line: { tension: 0.4 }, point: { radius: 3, hoverRadius: 5 } }
+  });
+
+  const tempCtx = document.getElementById('tempChart').getContext('2d');
+  const humCtx  = document.getElementById('humChart').getContext('2d');
+
+  const tempChart = new Chart(tempCtx, {
+    type: 'line',
+    data: { labels, datasets: [{ data: tempHist, borderColor: '#00d4aa', backgroundColor: 'rgba(0,212,170,0.08)', fill: true, borderWidth: 2 }] },
+    options: chartOpts('#00d4aa')
+  });
+
+  const humChart = new Chart(humCtx, {
+    type: 'line',
+    data: { labels, datasets: [{ data: humHist, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', fill: true, borderWidth: 2 }] },
+    options: chartOpts('#3b82f6')
+  });
+
+  // ── HELPERS ──────────────────────────────────────────────────
+  function getEstado(temp, hum, aire) {
+    if (temp > 35 || aire > 800) return 'danger';
+    if (temp > 30 || hum > 80 || aire > 500) return 'warn';
+    return 'ok';
+  }
+
+  function getLabel(estado) {
+    return { ok: 'Normal', warn: 'Precaución', danger: 'Peligro' }[estado];
+  }
+
+  function renderCards(temp, hum, aire) {
+    const estado = getEstado(temp, hum, aire);
+    const alertBanner = document.getElementById('alert-banner');
+    const alertText   = document.getElementById('alert-text');
+
+    if (estado === 'danger') {
+      alertBanner.style.display = 'flex';
+      alertText.textContent = `Alerta: ${temp > 35 ? 'Temperatura crítica (' + temp.toFixed(1) + '°C)' : ''} ${aire > 800 ? 'Calidad del aire crítica (' + aire + ' ppm)' : ''}`.trim();
+    } else {
+      alertBanner.style.display = 'none';
+    }
+
+    const estadoTemp = temp > 35 ? 'danger' : temp > 30 ? 'warn' : 'ok';
+    const estadoHum  = hum > 80  ? 'warn'   : 'ok';
+    const estadoAire = aire > 800 ? 'danger' : aire > 500 ? 'warn' : 'ok';
+
+    document.getElementById('cards-container').innerHTML = `
+      <div class="card ${estadoTemp}">
+        <div class="card-label">Temperatura</div>
+        <div class="card-value ${estadoTemp}">${temp.toFixed(1)}<span class="card-unit">°C</span></div>
+        <div class="card-status ${estadoTemp}">${getLabel(estadoTemp)}</div>
+      </div>
+      <div class="card ${estadoHum}">
+        <div class="card-label">Humedad</div>
+        <div class="card-value ${estadoHum}">${hum.toFixed(0)}<span class="card-unit">%</span></div>
+        <div class="card-status ${estadoHum}">${getLabel(estadoHum)}</div>
+      </div>
+      <div class="card ${estadoAire}">
+        <div class="card-label">Calidad del aire</div>
+        <div class="card-value ${estadoAire}">${Math.round(aire)}<span class="card-unit">ppm</span></div>
+        <div class="card-status ${estadoAire}">${getLabel(estadoAire)}</div>
+      </div>
+    `;
+  }
+
+  function updateCharts(temp, hum) {
+    const now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    labels.push(now);    tempHist.push(temp); humHist.push(hum);
+    if (labels.length > MAX_HIST) { labels.shift(); tempHist.shift(); humHist.shift(); }
+    tempChart.update();
+    humChart.update();
+  }
+
+  // ── FIREBASE LISTENER ────────────────────────────────────────
+  const ref = db.ref('/laboratorio');
+
+  ref.on('value', snap => {
+    const data = snap.val();
+    if (!data) return;
+
+    const temp = parseFloat(data.temperatura) || 0;
+    const hum  = parseFloat(data.humedad)     || 0;
+    const aire = parseFloat(data.calidad_aire) || 0;
+
+    document.getElementById('status-dot').className  = 'status-dot online';
+    document.getElementById('status-text').textContent = 'En línea';
+    document.getElementById('last-update').textContent =
+      'Última actualización: ' + new Date().toLocaleTimeString('es-CO');
+
+    renderCards(temp, hum, aire);
+    updateCharts(temp, hum);
+  }, err => {
+    document.getElementById('status-text').textContent = 'Sin conexión';
+    console.error(err);
+  });
+</script>
+</body>
+</html>
