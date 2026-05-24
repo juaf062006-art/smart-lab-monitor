@@ -290,7 +290,7 @@
   });
 
   function getEstado(t,h,a) {
-    if(t>35||a>800) return 'danger';
+    if(t>35||h>90||a>800) return 'danger';
     if(t>30||h>80||a>500) return 'warn';
     return 'ok';
   }
@@ -302,7 +302,7 @@
 
   function update(temp, hum, aire) {
     const eT = temp>35?'danger':temp>30?'warn':'ok';
-    const eH = hum>80?'warn':'ok';
+    const eH = hum>90?'danger':hum>80?'warn':'ok';
     const eA = aire>800?'danger':aire>500?'warn':'ok';
     const eg  = getEstado(temp,hum,aire);
 
@@ -379,6 +379,4 @@
     if(!d) return;
     update(parseFloat(d.temperatura)||0, parseFloat(d.humedad)||0, parseFloat(d.calidad_aire)||0);
   });
-</script>
-</body>
-</html>
+</sc
