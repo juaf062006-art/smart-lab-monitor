@@ -45,25 +45,27 @@
   style="width:100vw;height:100vh;">
 
   <a-assets>
-    <canvas id="panel-canvas" width="1024" height="512"></canvas>
+    <canvas id="panel-canvas" width="1024" height="460"></canvas>
   </a-assets>
 
-  <a-marker preset="hiro" id="marker">
+  <a-marker preset="hiro">
 
     <a-plane
       id="panel-plane"
       position="0 0.01 0"
       rotation="-90 0 0"
-      width="2.2" height="1.1"
+      width="2.2" height="1.0"
       material="src:#panel-canvas; transparent:true;">
     </a-plane>
 
+    <!-- Esfera arriba y centrada, no tapa columnas -->
     <a-sphere
       id="ar-sphere"
-      position="0 0.9 0"
+      position="0 1.1 0"
       radius="0.13"
       color="#00d4aa"
-      animation="property:position; from:0 0.75 0; to:0 1.05 0; dir:alternate; dur:1000; loop:true; easing:easeInOutSine">
+      animation="property:position; from:0 0.95 0; to:0 1.25 0; dir:alternate; dur:1000; loop:true; easing:easeInOutSine"
+      animation__scale="property:scale; from:1 1 1; to:1.12 1.12 1.12; dir:alternate; dur:800; loop:true; easing:easeInOutSine">
     </a-sphere>
 
   </a-marker>
@@ -73,7 +75,6 @@
 
 <script>
   const DB_URL = "https://smart-lab-monitor-d758a-default-rtdb.firebaseio.com/laboratorio.json";
-
   const canvas = document.getElementById('panel-canvas');
   const ctx    = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
@@ -84,109 +85,99 @@
   function eHum(v)  { return v>80?'warn':'ok'; }
   function eAire(v) { return v>800?'danger':v>500?'warn':'ok'; }
 
-  function roundRect(ctx, x, y, w, h, r) {
-    if (typeof r === 'number') r = {tl:r, tr:r, br:r, bl:r};
+  function roundRect(ctx,x,y,w,h,r) {
+    if (typeof r==='number') r={tl:r,tr:r,br:r,bl:r};
     ctx.beginPath();
-    ctx.moveTo(x+r.tl, y);
-    ctx.lineTo(x+w-r.tr, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r.tr);
-    ctx.lineTo(x+w, y+h-r.br); ctx.quadraticCurveTo(x+w, y+h, x+w-r.br, y+h);
-    ctx.lineTo(x+r.bl, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r.bl);
-    ctx.lineTo(x, y+r.tl); ctx.quadraticCurveTo(x, y, x+r.tl, y);
+    ctx.moveTo(x+r.tl,y); ctx.lineTo(x+w-r.tr,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r.tr);
+    ctx.lineTo(x+w,y+h-r.br); ctx.quadraticCurveTo(x+w,y+h,x+w-r.br,y+h);
+    ctx.lineTo(x+r.bl,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r.bl);
+    ctx.lineTo(x,y+r.tl); ctx.quadraticCurveTo(x,y,x+r.tl,y);
     ctx.closePath();
   }
 
-  function drawPanel(temp, hum, aire, hora, estado) {
-    const eT = eTemp(temp), eH = eHum(hum), eA = eAire(aire);
-    const eg = estado || ([eT,eH,eA].includes('danger')?'danger':[eT,eH,eA].includes('warn')?'warn':'ok');
+  function drawPanel(temp, hum, aire) {
+    const eT=eTemp(temp), eH=eHum(hum), eA=eAire(aire);
+    const eg=[eT,eH,eA].includes('danger')?'danger':[eT,eH,eA].includes('warn')?'warn':'ok';
 
     ctx.clearRect(0,0,W,H);
 
     // Fondo
-    ctx.fillStyle = 'rgba(5,13,26,0.95)';
+    ctx.fillStyle='rgba(5,13,26,0.95)';
     roundRect(ctx,0,0,W,H,32); ctx.fill();
 
-    // Barra superior
-    ctx.fillStyle = colorEstado(eg);
-    roundRect(ctx,0,0,W,14,{tl:32,tr:32,bl:0,br:0}); ctx.fill();
+    // Barra superior color estado
+    ctx.fillStyle=colorEstado(eg);
+    roundRect(ctx,0,0,W,16,{tl:32,tr:32,bl:0,br:0}); ctx.fill();
 
     // Título
-    ctx.fillStyle = '#00d4aa';
-    ctx.font = 'bold 38px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('SMART LAB MONITOR', W/2, 72);
+    ctx.fillStyle='#00d4aa';
+    ctx.font='bold 40px monospace';
+    ctx.textAlign='center';
+    ctx.fillText('SMART LAB MONITOR', W/2, 78);
 
     // Divisor sup
-    ctx.strokeStyle = '#0e2a4a'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(40,100); ctx.lineTo(W-40,100); ctx.stroke();
+    ctx.strokeStyle='#0e2a4a'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(40,105); ctx.lineTo(W-40,105); ctx.stroke();
 
     // Columnas
-    [{x:W*0.17, label:'TEMPERATURA', val:temp.toFixed(1)+' °C', e:eT},
-     {x:W*0.5,  label:'HUMEDAD',     val:hum.toFixed(0)+' %',   e:eH},
-     {x:W*0.83, label:'AIRE',        val:aire.toFixed(0)+' ppm', e:eA}
-    ].forEach(col => {
+    const cols = [
+      {x:W*0.17, label:'TEMPERATURA', val:temp.toFixed(1)+' °C', e:eT},
+      {x:W*0.5,  label:'HUMEDAD',     val:hum.toFixed(0)+' %',   e:eH},
+      {x:W*0.83, label:'AIRE',        val:aire.toFixed(0)+' ppm', e:eA},
+    ];
+
+    cols.forEach(col => {
+      // Label
       ctx.fillStyle='#64748b'; ctx.font='28px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(col.label, col.x, 155);
-      ctx.fillStyle='#ffffff'; ctx.font='bold 72px monospace';
-      ctx.fillText(col.val, col.x, 270);
-      ctx.fillStyle=colorEstado(col.e); ctx.font='bold 30px sans-serif';
-      ctx.fillText(labelEstado(col.e), col.x, 340);
+      ctx.fillText(col.label, col.x, 158);
+      // Valor grande
+      ctx.fillStyle='#ffffff'; ctx.font='bold 78px monospace';
+      ctx.fillText(col.val, col.x, 278);
+      // Estado
+      ctx.fillStyle=colorEstado(col.e); ctx.font='bold 32px sans-serif';
+      ctx.fillText(labelEstado(col.e), col.x, 356);
     });
 
     // Divisores verticales
     ctx.strokeStyle='#0e2a4a'; ctx.lineWidth=2;
     [W*0.335, W*0.665].forEach(x => {
-      ctx.beginPath(); ctx.moveTo(x,115); ctx.lineTo(x,360); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x,115); ctx.lineTo(x,375); ctx.stroke();
     });
 
-    // Divisor inf
-    ctx.beginPath(); ctx.moveTo(40,370); ctx.lineTo(W-40,370); ctx.stroke();
-
-    // Footer
-    ctx.fillStyle='#334155'; ctx.font='22px monospace'; ctx.textAlign='center';
-    ctx.fillText('Actualizado: '+hora+'  |  ESP32 + IoT + AR', W/2, 420);
-
-    // Barra inferior
-    ctx.fillStyle=colorEstado(eg); ctx.globalAlpha=0.35;
-    roundRect(ctx,0,H-14,W,14,{tl:0,tr:0,bl:32,br:32}); ctx.fill();
+    // Barra inferior color estado
+    ctx.fillStyle=colorEstado(eg); ctx.globalAlpha=0.4;
+    roundRect(ctx,0,H-16,W,16,{tl:0,tr:0,bl:32,br:32}); ctx.fill();
     ctx.globalAlpha=1.0;
 
     // Actualizar textura
-    const plane = document.getElementById('panel-plane');
-    if (plane && plane.getObject3D('mesh')) {
-      plane.getObject3D('mesh').material.map.needsUpdate = true;
-    }
+    const plane=document.getElementById('panel-plane');
+    if(plane&&plane.getObject3D('mesh'))
+      plane.getObject3D('mesh').material.map.needsUpdate=true;
 
     // Esfera
-    const sphere = document.getElementById('ar-sphere');
-    if (sphere) sphere.setAttribute('color', colorEstado(eg));
+    const sphere=document.getElementById('ar-sphere');
+    if(sphere) sphere.setAttribute('color', colorEstado(eg));
   }
 
-  // Dibujar placeholder inicial
-  drawPanel(0, 0, 0, '--:--:--', 'ok');
+  drawPanel(0,0,0);
 
-  // Fetch directo a Firebase REST API cada 5 segundos
   async function fetchData() {
     try {
       const res = await fetch(DB_URL);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if(!res.ok) throw new Error('HTTP '+res.status);
       const d = await res.json();
-      if (!d) return;
-
-      const temp = parseFloat(d.temperatura) || 0;
-      const hum  = parseFloat(d.humedad)     || 0;
-      const aire = parseFloat(d.calidad_aire) || 0;
-      const hora = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-
-      drawPanel(temp, hum, aire, hora, null);
-      document.getElementById('pill-text').textContent = 'En linea';
-
+      if(!d) return;
+      drawPanel(
+        parseFloat(d.temperatura)||0,
+        parseFloat(d.humedad)||0,
+        parseFloat(d.calidad_aire)||0
+      );
+      document.getElementById('pill-text').textContent='En linea';
     } catch(e) {
-      console.error('Error Firebase:', e);
-      document.getElementById('pill-text').textContent = 'Error: ' + e.message;
+      document.getElementById('pill-text').textContent='Error conexion';
     }
   }
 
-  // Ejecutar al cargar y cada 5 segundos
   fetchData();
   setInterval(fetchData, 5000);
 </script>
