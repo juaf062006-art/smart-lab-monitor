@@ -57,79 +57,120 @@
 
   <a-marker preset="hiro">
 
-    <!-- Esfera flotante animada — indicador de estado -->
+    <!-- Esfera flotante -->
     <a-sphere
       id="ar-sphere"
-      position="0 1.2 0"
-      radius="0.15"
+      position="0 1.0 0"
+      radius="0.12"
       color="#00d4aa"
-      animation="property:position; from:0 1.0 0; to:0 1.4 0; dir:alternate; dur:1000; loop:true; easing:easeInOutSine"
-      animation__pulse="property:scale; from:1 1 1; to:1.15 1.15 1.15; dir:alternate; dur:800; loop:true; easing:easeInOutSine">
+      animation="property:position; from:0 0.85 0; to:0 1.15 0; dir:alternate; dur:1000; loop:true; easing:easeInOutSine">
     </a-sphere>
 
-    <!-- Panel principal — billboard (siempre mira a la cámara) -->
-    <a-entity position="0 0.5 0" look-at="[camera]">
+    <!-- Fondo panel -->
+    <a-plane
+      position="0 0.001 0"
+      rotation="-90 0 0"
+      width="2.4" height="1.8"
+      color="#050d1a"
+      opacity="0.92">
+    </a-plane>
 
-      <!-- Fondo del panel -->
-      <a-plane
-        width="2.0" height="1.5"
-        color="#050d1a"
-        opacity="0.88"
-        position="0 0 -0.001">
-      </a-plane>
+    <!-- Barra superior -->
+    <a-plane
+      position="0 0.002 0.86"
+      rotation="-90 0 0"
+      width="2.4" height="0.08"
+      color="#00d4aa">
+    </a-plane>
 
-      <!-- Barra superior teal -->
-      <a-plane
-        width="2.0" height="0.07"
-        color="#00d4aa"
-        position="0 0.715 0">
-      </a-plane>
+    <!-- Título -->
+    <a-text
+      value="SMART LAB MONITOR"
+      position="0 0.003 0.72"
+      rotation="-90 0 0"
+      align="center"
+      color="#00d4aa"
+      width="3"
+      font="https://cdn.aframe.io/fonts/mozillavr.fnt">
+    </a-text>
 
-      <!-- Título -->
-      <a-text
-        id="ar-title"
-        value="SMART LAB MONITOR"
-        position="0 0.58 0"
-        align="center"
-        color="#00d4aa"
-        width="3.5"
-        font="https://cdn.aframe.io/fonts/mozillavr.fnt">
-      </a-text>
+    <!-- Divisor horizontal sup -->
+    <a-plane position="0 0.002 0.52" rotation="-90 0 0" width="2.2" height="0.015" color="#0e2a4a"></a-plane>
 
-      <!-- Línea divisora superior -->
-      <a-plane width="1.8" height="0.012" color="#0e2a4a" position="0 0.43 0"></a-plane>
+    <!-- ══ COLUMNA IZQUIERDA: TEMPERATURA ══ -->
+    <a-text value="TEMPERATURA"
+      position="-0.7 0.003 0.4"
+      rotation="-90 0 0" align="center"
+      color="#64748b" width="1.8">
+    </a-text>
+    <a-text id="ar-temp" value="-- C"
+      position="-0.7 0.003 0.2"
+      rotation="-90 0 0" align="center"
+      color="#ffffff" width="2.8">
+    </a-text>
+    <a-text id="ar-temp-st" value="normal"
+      position="-0.7 0.003 0.04"
+      rotation="-90 0 0" align="center"
+      color="#00d4aa" width="2.0">
+    </a-text>
 
-      <!-- ── TEMPERATURA ── -->
-      <a-text value="TEMPERATURA" position="-0.62 0.34 0" align="center" color="#64748b" width="2.0"></a-text>
-      <a-text id="ar-temp" value="--°C" position="-0.62 0.18 0" align="center" color="#ffffff" width="3.2"></a-text>
-      <a-text id="ar-temp-st" value="normal" position="-0.62 0.04 0" align="center" color="#00d4aa" width="2.2"></a-text>
+    <!-- Divisor vertical 1 -->
+    <a-plane position="-0.08 0.002 0.2" rotation="-90 0 0" width="0.015" height="0.7" color="#0e2a4a"></a-plane>
 
-      <!-- Divisor vertical izq -->
-      <a-plane width="0.012" height="0.55" color="#0e2a4a" position="-0.12 0.18 0"></a-plane>
+    <!-- ══ COLUMNA CENTRO: HUMEDAD ══ -->
+    <a-text value="HUMEDAD"
+      position="0.5 0.003 0.4"
+      rotation="-90 0 0" align="center"
+      color="#64748b" width="1.8">
+    </a-text>
+    <a-text id="ar-hum" value="-- %"
+      position="0.5 0.003 0.2"
+      rotation="-90 0 0" align="center"
+      color="#ffffff" width="2.8">
+    </a-text>
+    <a-text id="ar-hum-st" value="normal"
+      position="0.5 0.003 0.04"
+      rotation="-90 0 0" align="center"
+      color="#00d4aa" width="2.0">
+    </a-text>
 
-      <!-- ── HUMEDAD ── -->
-      <a-text value="HUMEDAD" position="0.38 0.34 0" align="center" color="#64748b" width="2.0"></a-text>
-      <a-text id="ar-hum" value="--%"  position="0.38 0.18 0" align="center" color="#ffffff" width="3.2"></a-text>
-      <a-text id="ar-hum-st" value="normal" position="0.38 0.04 0" align="center" color="#00d4aa" width="2.2"></a-text>
+    <!-- Divisor vertical 2 -->
+    <a-plane position="1.08 0.002 0.2" rotation="-90 0 0" width="0.015" height="0.7" color="#0e2a4a"></a-plane>
 
-      <!-- Divisor vertical der -->
-      <a-plane width="0.012" height="0.55" color="#0e2a4a" position="0.88 0.18 0"></a-plane>
+    <!-- ══ COLUMNA DERECHA: AIRE ══ -->
+    <a-text value="AIRE"
+      position="1.6 0.003 0.4"
+      rotation="-90 0 0" align="center"
+      color="#64748b" width="1.8">
+    </a-text>
+    <a-text id="ar-aire" value="-- ppm"
+      position="1.6 0.003 0.2"
+      rotation="-90 0 0" align="center"
+      color="#ffffff" width="2.5">
+    </a-text>
+    <a-text id="ar-aire-st" value="normal"
+      position="1.6 0.003 0.04"
+      rotation="-90 0 0" align="center"
+      color="#00d4aa" width="2.0">
+    </a-text>
 
-      <!-- ── AIRE ── -->
-      <a-text value="CALIDAD AIRE" position="1.12 0.34 0" align="center" color="#64748b" width="1.8"></a-text>
-      <a-text id="ar-aire" value="-- ppm" position="1.12 0.18 0" align="center" color="#ffffff" width="2.6"></a-text>
-      <a-text id="ar-aire-st" value="normal" position="1.12 0.04 0" align="center" color="#00d4aa" width="2.2"></a-text>
+    <!-- Divisor horizontal inf -->
+    <a-plane position="0 0.002 -0.28" rotation="-90 0 0" width="2.2" height="0.015" color="#0e2a4a"></a-plane>
 
-      <!-- Línea divisora inferior -->
-      <a-plane width="1.8" height="0.012" color="#0e2a4a" position="0 -0.12 0"></a-plane>
+    <!-- Footer -->
+    <a-text id="ar-hora" value="Esperando datos..."
+      position="0 0.003 -0.52"
+      rotation="-90 0 0" align="center"
+      color="#334155" width="2.6">
+    </a-text>
 
-      <!-- Footer -->
-      <a-text id="ar-hora" value="Esperando datos..." position="0 -0.27 0" align="center" color="#334155" width="2.8"></a-text>
-
-      <!-- Barra inferior teal -->
-      <a-plane width="2.0" height="0.05" color="#00d4aa" opacity="0.4" position="0 -0.725 0"></a-plane>
-
-    </a-entity>
+    <!-- Barra inferior -->
+    <a-plane
+      position="0 0.002 -0.86"
+      rotation="-90 0 0"
+      width="2.4" height="0.06"
+      color="#00d4aa" opacity="0.35">
+    </a-plane>
 
   </a-marker>
 
@@ -137,17 +178,6 @@
 </a-scene>
 
 <script>
-  // Registrar componente look-at
-  AFRAME.registerComponent('look-at', {
-    schema: {type: 'selector'},
-    tick: function () {
-      const target = this.data || document.querySelector('[camera]');
-      if (!target) return;
-      this.el.object3D.lookAt(target.object3D ? target.object3D.position : new THREE.Vector3());
-    }
-  });
-
-  // Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyDWN9YbdTau_mUEQs50A2fmxtMeGIe4qWo",
     authDomain: "smart-lab-monitor-d758a.firebaseapp.com",
@@ -161,8 +191,8 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  function colorEstado(e) { return {ok:'#00d4aa', warn:'#f59e0b', danger:'#ef4444'}[e]; }
-  function labelEstado(e) { return {ok:'Normal', warn:'PRECAUCION', danger:'PELIGRO'}[e]; }
+  function colorEstado(e) { return {ok:'#00d4aa',warn:'#f59e0b',danger:'#ef4444'}[e]; }
+  function labelEstado(e) { return {ok:'Normal',warn:'PRECAUCION',danger:'PELIGRO'}[e]; }
   function eTemp(v) { return v>35?'danger':v>30?'warn':'ok'; }
   function eHum(v)  { return v>80?'warn':'ok'; }
   function eAire(v) { return v>800?'danger':v>500?'warn':'ok'; }
@@ -175,30 +205,25 @@
   db.ref('/laboratorio').on('value', snap => {
     const d = snap.val();
     if (!d) return;
+    const temp = parseFloat(d.temperatura)||0;
+    const hum  = parseFloat(d.humedad)||0;
+    const aire = parseFloat(d.calidad_aire)||0;
 
-    const temp = parseFloat(d.temperatura) || 0;
-    const hum  = parseFloat(d.humedad)     || 0;
-    const aire = parseFloat(d.calidad_aire) || 0;
+    set('ar-temp', 'value', temp.toFixed(1)+' C');
+    set('ar-hum',  'value', hum.toFixed(0)+' %');
+    set('ar-aire', 'value', aire.toFixed(0)+' ppm');
 
-    set('ar-temp', 'value', temp.toFixed(1) + 'C');
-    set('ar-hum',  'value', hum.toFixed(0)  + '%');
-    set('ar-aire', 'value', aire.toFixed(0) + ' ppm');
+    const eT=eTemp(temp), eH=eHum(hum), eA=eAire(aire);
+    set('ar-temp-st','value',labelEstado(eT)); set('ar-temp-st','color',colorEstado(eT));
+    set('ar-hum-st', 'value',labelEstado(eH)); set('ar-hum-st', 'color',colorEstado(eH));
+    set('ar-aire-st','value',labelEstado(eA)); set('ar-aire-st','color',colorEstado(eA));
 
-    const eT = eTemp(temp), eH = eHum(hum), eA = eAire(aire);
+    const eg=[eT,eH,eA].includes('danger')?'danger':[eT,eH,eA].includes('warn')?'warn':'ok';
+    set('ar-sphere','color',colorEstado(eg));
 
-    set('ar-temp-st', 'value', labelEstado(eT));
-    set('ar-temp-st', 'color', colorEstado(eT));
-    set('ar-hum-st',  'value', labelEstado(eH));
-    set('ar-hum-st',  'color', colorEstado(eH));
-    set('ar-aire-st', 'value', labelEstado(eA));
-    set('ar-aire-st', 'color', colorEstado(eA));
-
-    const eg = [eT,eH,eA].includes('danger')?'danger':[eT,eH,eA].includes('warn')?'warn':'ok';
-    set('ar-sphere', 'color', colorEstado(eg));
-
-    const hora = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    set('ar-hora', 'value', 'Actualizado: ' + hora);
-    document.getElementById('pill-text').textContent = 'En linea';
+    const hora=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    set('ar-hora','value','Actualizado: '+hora);
+    document.getElementById('pill-text').textContent='En linea';
   });
 </script>
 </body>
