@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LabSense IoT — Monitor de Laboratorio</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   :root {
@@ -253,17 +251,7 @@
 <footer>LabSense IoT · Digitales III · ESP32 + Firebase + AR.js · Industria 4.0</footer>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyDWN9YbdTau_mUEQs50A2fmxtMeGIe4qWo",
-    authDomain: "smart-lab-monitor-d758a.firebaseapp.com",
-    databaseURL: "https://smart-lab-monitor-d758a-default-rtdb.firebaseio.com",
-    projectId: "smart-lab-monitor-d758a",
-    storageBucket: "smart-lab-monitor-d758a.firebasestorage.app",
-    messagingSenderId: "89073383808",
-    appId: "1:89073383808:web:26ea913952d586af752965"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  const DB_URL = "https://smart-lab-monitor-d758a-default-rtdb.firebaseio.com/laboratorio.json";
 
   const MAX = 20;
   let labels=[], tempH=[], humH=[];
@@ -272,7 +260,7 @@
     responsive:true, maintainAspectRatio:false,
     plugins:{legend:{display:false}},
     scales:{
-      x:{grid:{color:'#162340'}, ticks:{color:'#64748b', font:{family:'Space Mono',size:10}}},
+      x:{grid:{color:'#162340'}, ticks:{color:'#64748b', font:{family:'Space Mono',size:10}, maxTicksLimit:6}},
       y:{grid:{color:'#162340'}, ticks:{color:'#64748b', font:{family:'Space Mono',size:10}}}
     },
     elements:{line:{tension:.4}, point:{radius:3, hoverRadius:5}}
@@ -290,8 +278,8 @@
   });
 
   function getEstado(t,h,a) {
-    if(t>35||h>90||a>800) return 'danger';
-    if(t>30||h>80||a>500) return 'warn';
+    if(t>35||h>80||a>800) return 'danger';
+    if(t>30||h>70||a>500) return 'warn';
     return 'ok';
   }
 
@@ -302,7 +290,7 @@
 
   function update(temp, hum, aire) {
     const eT = temp>35?'danger':temp>30?'warn':'ok';
-    const eH = hum>90?'danger':hum>80?'warn':'ok';
+    const eH = hum>80?'danger':hum>70?'warn':'ok';
     const eA = aire>800?'danger':aire>500?'warn':'ok';
     const eg  = getEstado(temp,hum,aire);
 
@@ -311,7 +299,6 @@
     document.getElementById('val-hum').innerHTML  = hum.toFixed(0)+'<span class="card-unit">%</span>';
     document.getElementById('val-aire').innerHTML = Math.round(aire)+'<span class="card-unit">ppm</span>';
 
-    // Barras (temp max 50, hum max 100, aire max 1000)
     document.getElementById('bar-temp').style.width  = Math.min(temp/50*100,100)+'%';
     document.getElementById('bar-hum').style.width   = Math.min(hum,100)+'%';
     document.getElementById('bar-aire').style.width  = Math.min(aire/1000*100,100)+'%';
@@ -332,38 +319,32 @@
     const icono = document.getElementById('estado-icono');
     const label = document.getElementById('estado-label');
     const desc  = document.getElementById('estado-desc');
-    cls(card,''); cls(label,'');
+    card.classList.remove('warn','danger');
+    label.classList.remove('warn','danger');
+    icono.classList.remove('warn','danger');
 
     if(eg==='danger') {
-      card.classList.add('danger'); label.classList.add('danger');
-      icono.classList.add('danger'); icono.classList.remove('warn');
-      icono.textContent='🔴';
-      label.textContent='PELIGRO';
-      desc.textContent='Condiciones críticas detectadas — revisar inmediatamente';
+      card.classList.add('danger'); label.classList.add('danger'); icono.classList.add('danger');
+      icono.textContent='🔴'; label.textContent='PELIGRO';
+      desc.textContent='Condiciones críticas — revisar inmediatamente';
       document.getElementById('alert-banner').style.display='flex';
       document.getElementById('alert-text').textContent =
         (temp>35?`Temperatura crítica: ${temp.toFixed(1)}°C. `:'') +
+        (hum>80?`Humedad crítica: ${hum.toFixed(0)}%. `:'') +
         (aire>800?`Calidad del aire crítica: ${Math.round(aire)} ppm.`:'');
     } else if(eg==='warn') {
-      card.classList.add('warn'); label.classList.add('warn');
-      icono.classList.add('warn'); icono.classList.remove('danger');
-      icono.textContent='🟡';
-      label.textContent='PRECAUCIÓN';
+      card.classList.add('warn'); label.classList.add('warn'); icono.classList.add('warn');
+      icono.textContent='🟡'; label.textContent='PRECAUCIÓN';
       desc.textContent='Algunos valores fuera del rango ideal — monitorear';
       document.getElementById('alert-banner').style.display='none';
     } else {
-      icono.classList.remove('warn','danger');
-      icono.textContent='🟢';
-      label.textContent='NORMAL';
+      icono.textContent='🟢'; label.textContent='NORMAL';
       desc.textContent='Todas las condiciones dentro de rangos seguros';
       document.getElementById('alert-banner').style.display='none';
     }
 
-    // Live badge
     document.getElementById('live-dot').className='live-dot on';
     document.getElementById('live-text').textContent='En línea';
-
-    // Hora
     document.getElementById('estado-time').textContent =
       'Última actualización: ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
@@ -374,9 +355,21 @@
     cT.update(); cH.update();
   }
 
-  db.ref('/laboratorio').on('value', snap => {
-    const d = snap.val();
-    if(!d) return;
-    update(parseFloat(d.temperatura)||0, parseFloat(d.humedad)||0, parseFloat(d.calidad_aire)||0);
-  });
-</sc
+  async function fetchData() {
+    try {
+      const res = await fetch(DB_URL);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const d = await res.json();
+      if(!d) return;
+      update(parseFloat(d.temperatura)||0, parseFloat(d.humedad)||0, parseFloat(d.calidad_aire)||0);
+    } catch(e) {
+      document.getElementById('live-text').textContent = 'Sin conexión';
+      console.error(e);
+    }
+  }
+
+  fetchData();
+  setInterval(fetchData, 5000);
+</script>
+</body>
+</html>
