@@ -244,6 +244,10 @@
       <div class="chart-title">Humedad — últimas lecturas</div>
       <div class="chart-wrap"><canvas id="chartHum"></canvas></div>
     </div>
+    <div class="chart-card" style="grid-column:1/-1">
+      <div class="chart-title">Calidad del aire — últimas lecturas</div>
+      <div class="chart-wrap"><canvas id="chartAire"></canvas></div>
+    </div>
   </div>
 
 </main>
@@ -254,7 +258,7 @@
   const DB_URL = "https://smart-lab-monitor-d758a-default-rtdb.firebaseio.com/laboratorio.json";
 
   const MAX = 20;
-  let labels=[], tempH=[], humH=[];
+  let labels=[], tempH=[], humH=[], aireH=[];
 
   const chartOpts = (color) => ({
     responsive:true, maintainAspectRatio:false,
@@ -270,6 +274,11 @@
     type:'line',
     data:{labels, datasets:[{data:tempH, borderColor:'#00d4aa', backgroundColor:'rgba(0,212,170,.08)', fill:true, borderWidth:2}]},
     options:chartOpts('#00d4aa')
+  });
+  const cA = new Chart(document.getElementById('chartAire').getContext('2d'), {
+    type:'line',
+    data:{labels, datasets:[{data:aireH, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.08)', fill:true, borderWidth:2}]},
+    options:chartOpts('#f59e0b')
   });
   const cH = new Chart(document.getElementById('chartHum').getContext('2d'), {
     type:'line',
@@ -350,26 +359,6 @@
 
     // Charts
     const now = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    labels.push(now); tempH.push(temp); humH.push(hum);
-    if(labels.length>MAX){labels.shift();tempH.shift();humH.shift();}
-    cT.update(); cH.update();
-  }
-
-  async function fetchData() {
-    try {
-      const res = await fetch(DB_URL);
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const d = await res.json();
-      if(!d) return;
-      update(parseFloat(d.temperatura)||0, parseFloat(d.humedad)||0, parseFloat(d.calidad_aire)||0);
-    } catch(e) {
-      document.getElementById('live-text').textContent = 'Sin conexión';
-      console.error(e);
-    }
-  }
-
-  fetchData();
-  setInterval(fetchData, 5000);
-</script>
-</body>
-</html>
+    labels.push(now); tempH.push(temp); humH.push(hum); aireH.push(aire);
+    if(labels.length>MAX){labels.shift();tempH.shift();humH.shift();aireH.shift();}
+    c
