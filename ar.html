@@ -9,6 +9,7 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { overflow:hidden; background:#000; }
+
     #ui {
       position:fixed; top:0; left:0; right:0; z-index:999;
       padding:10px 16px;
@@ -25,25 +26,59 @@
     }
     .pdot { width:6px; height:6px; border-radius:50%; background:#00d4aa; animation:blink 1.5s infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
-  </style>
-  <style>
-    @keyframes flashRed {
-      0%,100% { background: transparent; }
-      50% { background: rgba(239,68,68,0.25); }
+
+    /* Overlay de estado */
+    #estado-overlay {
+      position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+      z-index:999; pointer-events:none;
+      padding:10px 28px; border-radius:30px;
+      font-family:monospace; font-size:18px; font-weight:700;
+      letter-spacing:.12em; text-transform:uppercase;
+      display:none; text-align:center;
+      border:2px solid;
     }
-    .flash-danger { animation: flashRed 0.6s infinite; }
+    #estado-overlay.normal   { display:block; background:rgba(0,212,170,.2); color:#00d4aa; border-color:#00d4aa; }
+    #estado-overlay.warn     { display:block; background:rgba(245,158,11,.25); color:#f59e0b; border-color:#f59e0b; animation:pulseWarn 1s infinite; }
+    #estado-overlay.danger   { display:block; background:rgba(239,68,68,.3); color:#ef4444; border-color:#ef4444; animation:pulseDanger .5s infinite; }
+
+    @keyframes pulseWarn   { 0%,100%{opacity:1} 50%{opacity:.6} }
+    @keyframes pulseDanger { 0%,100%{opacity:1;transform:translateX(-50%) scale(1)} 50%{opacity:.8;transform:translateX(-50%) scale(1.04)} }
+
+    /* Flash de pantalla completa */
+    #flash {
+      position:fixed; top:0; left:0; right:0; bottom:0;
+      z-index:998; pointer-events:none; opacity:0;
+      transition:opacity .2s;
+    }
+    #flash.warn-flash   { background:rgba(245,158,11,.15); animation:flashWarn 1.5s infinite; }
+    #flash.danger-flash { background:rgba(239,68,68,.2);   animation:flashDanger .6s infinite; }
+
+    @keyframes flashWarn   { 0%,100%{opacity:0} 50%{opacity:1} }
+    @keyframes flashDanger { 0%,100%{opacity:0} 50%{opacity:1} }
+
+    #hint {
+      position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+      z-index:999; pointer-events:none;
+      background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.15);
+      border-radius:20px; padding:7px 18px;
+      font-size:11px; color:rgba(255,255,255,0.6); white-space:nowrap;
+    }
   </style>
 </head>
 <body>
 
-<div id="flash-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:998;pointer-events:none;transition:all .3s;"></div>
+<div id="flash"></div>
+
 <div id="ui">
   <div>
-    <div class="ui-title">Smart Lab AR</div>
+    <div class="ui-title">LabSense IoT — AR</div>
     <div class="ui-sub">Apunta al marcador Hiro</div>
   </div>
   <div id="pill"><div class="pdot"></div><span id="pill-text">Conectando...</span></div>
 </div>
+
+<div id="estado-overlay">● NORMAL</div>
+<div id="hint">Mantén el marcador Hiro dentro del encuadre</div>
 
 <a-scene
   embedded
@@ -66,14 +101,13 @@
       material="src:#panel-canvas; transparent:true;">
     </a-plane>
 
-    <!-- Esfera arriba y centrada, no tapa columnas -->
     <a-sphere
       id="ar-sphere"
-      position="0 1.1 0"
+      position="0 0.9 0"
       radius="0.13"
       color="#00d4aa"
-      animation="property:position; from:0 0.95 0; to:0 1.25 0; dir:alternate; dur:1000; loop:true; easing:easeInOutSine"
-      animation__scale="property:scale; from:1 1 1; to:1.12 1.12 1.12; dir:alternate; dur:800; loop:true; easing:easeInOutSine">
+      animation="property:position; from:0 0.75 0; to:0 1.05 0; dir:alternate; dur:1000; loop:true; easing:easeInOutSine"
+      animation__scale="property:scale; from:1 1 1; to:1.15 1.15 1.15; dir:alternate; dur:800; loop:true; easing:easeInOutSine">
     </a-sphere>
 
   </a-marker>
@@ -90,11 +124,11 @@
   function colorEstado(e) { return {ok:'#00d4aa', warn:'#f59e0b', danger:'#ef4444'}[e]; }
   function labelEstado(e) { return {ok:'Normal', warn:'PRECAUCION', danger:'PELIGRO'}[e]; }
   function eTemp(v) { return v>35?'danger':v>30?'warn':'ok'; }
-  function eHum(v)  { return v>80?'warn':'ok'; }
+  function eHum(v)  { return v>80?'danger':v>70?'warn':'ok'; }
   function eAire(v) { return v>800?'danger':v>500?'warn':'ok'; }
 
   function roundRect(ctx,x,y,w,h,r) {
-    if (typeof r==='number') r={tl:r,tr:r,br:r,bl:r};
+    if(typeof r==='number') r={tl:r,tr:r,br:r,bl:r};
     ctx.beginPath();
     ctx.moveTo(x+r.tl,y); ctx.lineTo(x+w-r.tr,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r.tr);
     ctx.lineTo(x+w,y+h-r.br); ctx.quadraticCurveTo(x+w,y+h,x+w-r.br,y+h);
@@ -103,77 +137,29 @@
     ctx.closePath();
   }
 
-  function drawPanel(temp, hum, aire) {
+  function drawPanel(temp, hum, aire, eg) {
     const eT=eTemp(temp), eH=eHum(hum), eA=eAire(aire);
-    const eg=[eT,eH,eA].includes('danger')?'danger':[eT,eH,eA].includes('warn')?'warn':'ok';
+    const mainColor = colorEstado(eg);
 
     ctx.clearRect(0,0,W,H);
 
-    // Fondo
+    // Fondo con borde de color según estado
     ctx.fillStyle='rgba(5,13,26,0.95)';
     roundRect(ctx,0,0,W,H,32); ctx.fill();
 
-    // Barra superior color estado
-    ctx.fillStyle=colorEstado(eg);
+    // Borde exterior del color del estado (más grueso en peligro)
+    ctx.strokeStyle = mainColor;
+    ctx.lineWidth = eg==='danger' ? 8 : eg==='warn' ? 5 : 3;
+    roundRect(ctx,2,2,W-4,H-4,30); ctx.stroke();
+
+    // Barra superior
+    ctx.fillStyle = mainColor;
     roundRect(ctx,0,0,W,16,{tl:32,tr:32,bl:0,br:0}); ctx.fill();
 
     // Título
-    ctx.fillStyle='#00d4aa';
-    ctx.font='bold 40px monospace';
-    ctx.textAlign='center';
-    ctx.fillText('SMART LAB MONITOR', W/2, 78);
+    ctx.fillStyle = mainColor;
+    ctx.font = 'bold 38px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('SMART LAB MONITOR', W/2, 72);
 
-    // Divisor sup
-    ctx.strokeStyle='#0e2a4a'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(40,105); ctx.lineTo(W-40,105); ctx.stroke();
-
-    // Columnas
-    const cols = [
-      {x:W*0.17, label:'TEMPERATURA', val:temp.toFixed(1)+' °C', e:eT},
-      {x:W*0.5,  label:'HUMEDAD',     val:hum.toFixed(0)+' %',   e:eH},
-      {x:W*0.83, label:'AIRE',        val:aire.toFixed(0)+' ppm', e:eA},
-    ];
-
-    cols.forEach(col => {
-      // Label
-      ctx.fillStyle='#64748b'; ctx.font='28px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(col.label, col.x, 158);
-      // Valor grande
-      ctx.fillStyle='#ffffff'; ctx.font='bold 78px monospace';
-      ctx.fillText(col.val, col.x, 278);
-      // Estado
-      ctx.fillStyle=colorEstado(col.e); ctx.font='bold 32px sans-serif';
-      ctx.fillText(labelEstado(col.e), col.x, 356);
-    });
-
-    // Divisores verticales
-    ctx.strokeStyle='#0e2a4a'; ctx.lineWidth=2;
-    [W*0.335, W*0.665].forEach(x => {
-      ctx.beginPath(); ctx.moveTo(x,115); ctx.lineTo(x,375); ctx.stroke();
-    });
-
-    // Barra inferior color estado
-    ctx.fillStyle=colorEstado(eg); ctx.globalAlpha=0.4;
-    roundRect(ctx,0,H-16,W,16,{tl:0,tr:0,bl:32,br:32}); ctx.fill();
-    ctx.globalAlpha=1.0;
-
-    // Actualizar textura
-    const plane=document.getElementById('panel-plane');
-    if(plane&&plane.getObject3D('mesh'))
-      plane.getObject3D('mesh').material.map.needsUpdate=true;
-
-    // Esfera
-    const sphere=document.getElementById('ar-sphere');
-    if(sphere) sphere.setAttribute('color', colorEstado(eg));
-  }
-
-  drawPanel(0,0,0);
-
-  async function fetchData() {
-    try {
-      const res = await fetch(DB_URL);
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const d = await res.json();
-      if(!d) return;
-      drawPanel(
-        parseFloat(d.te
+    //
