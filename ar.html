@@ -26,9 +26,17 @@
     .pdot { width:6px; height:6px; border-radius:50%; background:#00d4aa; animation:blink 1.5s infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
   </style>
+  <style>
+    @keyframes flashRed {
+      0%,100% { background: transparent; }
+      50% { background: rgba(239,68,68,0.25); }
+    }
+    .flash-danger { animation: flashRed 0.6s infinite; }
+  </style>
 </head>
 <body>
 
+<div id="flash-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:998;pointer-events:none;transition:all .3s;"></div>
 <div id="ui">
   <div>
     <div class="ui-title">Smart Lab AR</div>
@@ -168,18 +176,4 @@
       const d = await res.json();
       if(!d) return;
       drawPanel(
-        parseFloat(d.temperatura)||0,
-        parseFloat(d.humedad)||0,
-        parseFloat(d.calidad_aire)||0
-      );
-      document.getElementById('pill-text').textContent='En linea';
-    } catch(e) {
-      document.getElementById('pill-text').textContent='Error conexion';
-    }
-  }
-
-  fetchData();
-  setInterval(fetchData, 5000);
-</script>
-</body>
-</html>
+        parseFloat(d.te
