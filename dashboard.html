@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Lab Monitor</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>LabSense IoT — Monitor de Laboratorio</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   :root {
-    --bg: #0a0e1a;
-    --surface: #111827;
-    --surface2: #1a2236;
-    --border: #1e2d4a;
+    --bg: #080f1e;
+    --surface: #0d1829;
+    --surface2: #111f35;
+    --border: #162340;
     --accent: #00d4aa;
-    --accent2: #3b82f6;
+    --blue: #3b82f6;
     --warn: #f59e0b;
     --danger: #ef4444;
     --text: #e2e8f0;
@@ -23,275 +23,153 @@
     --mono: 'Space Mono', monospace;
     --sans: 'DM Sans', sans-serif;
   }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-  }
-
-  /* Header */
+  /* ── HEADER ── */
   header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 32px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 28px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
   }
-
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo-icon {
+    width:36px; height:36px; border-radius:10px;
+    background:linear-gradient(135deg, #00d4aa22, #3b82f622);
+    border:1px solid var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
   }
-
-  .logo-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: var(--accent);
-    animation: pulse 2s infinite;
+  .logo-text h1 { font-family:var(--mono); font-size:15px; font-weight:700; letter-spacing:.06em; }
+  .logo-text p  { font-size:11px; color:var(--muted); margin-top:1px; }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .live-badge {
+    display:flex; align-items:center; gap:7px;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:20px; padding:6px 14px;
+    font-family:var(--mono); font-size:11px; color:var(--muted);
   }
+  .live-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); transition:background .4s; }
+  .live-dot.on { background:var(--accent); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
+  /* ── MAIN ── */
+  main { max-width:1200px; margin:0 auto; padding:28px 20px; }
+
+  /* ── ESTADO GENERAL (semáforo) ── */
+  .estado-general {
+    border-radius:16px; padding:24px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:24px;
+    border:1px solid var(--border);
+    background:var(--surface);
+    transition:all .4s;
+    position:relative; overflow:hidden;
   }
-
-  .logo h1 {
-    font-family: var(--mono);
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: var(--text);
+  .estado-general::before {
+    content:''; position:absolute; left:0; top:0; bottom:0; width:5px;
+    background:var(--accent); transition:background .4s;
   }
+  .estado-general.warn::before  { background:var(--warn); }
+  .estado-general.danger::before { background:var(--danger); }
 
-  .logo span {
-    font-size: 12px;
-    color: var(--muted);
-    font-family: var(--mono);
+  .estado-left { display:flex; align-items:center; gap:20px; }
+  .estado-icono {
+    width:64px; height:64px; border-radius:50%;
+    background:rgba(0,212,170,0.12);
+    border:2px solid var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px; transition:all .4s;
+    flex-shrink:0;
   }
+  .estado-icono.warn   { background:rgba(245,158,11,.12); border-color:var(--warn); }
+  .estado-icono.danger { background:rgba(239,68,68,.12);  border-color:var(--danger); animation:ring .8s infinite; }
+  @keyframes ring { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
 
-  .status-badge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    padding: 6px 14px;
-    border-radius: 20px;
+  .estado-info h2 { font-size:13px; color:var(--muted); font-family:var(--mono); letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px; }
+  .estado-label {
+    font-size:32px; font-weight:600; color:var(--accent);
+    transition:color .4s; line-height:1;
   }
+  .estado-label.warn   { color:var(--warn); }
+  .estado-label.danger { color:var(--danger); }
+  .estado-desc { font-size:13px; color:var(--muted); margin-top:6px; }
 
-  .status-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: background 0.4s;
-  }
+  .estado-right { text-align:right; }
+  .estado-time  { font-family:var(--mono); font-size:11px; color:var(--muted); }
 
-  .status-dot.online { background: var(--accent); animation: pulse 2s infinite; }
-
-  /* Main layout */
-  main {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 32px 24px;
-  }
-
-  /* Cards grid */
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 28px;
-  }
+  /* ── CARDS ── */
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
 
   .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.3s, transform 0.2s;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:22px; position:relative; overflow:hidden;
+    transition:transform .2s, border-color .3s;
   }
-
-  .card:hover { transform: translateY(-2px); }
-
-  .card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: var(--accent);
-    transition: background 0.4s;
+  .card:hover { transform:translateY(-2px); }
+  .card::after {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background:var(--accent); transition:background .4s;
   }
+  .card.warn::after   { background:var(--warn); }
+  .card.danger::after { background:var(--danger); }
 
-  .card.warn::before { background: var(--warn); }
-  .card.danger::before { background: var(--danger); }
+  .card-label { font-size:11px; font-family:var(--mono); color:var(--muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:14px; }
 
-  .card-label {
-    font-size: 11px;
-    font-family: var(--mono);
-    color: var(--muted);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-  }
+  .card-value { font-family:var(--mono); font-size:42px; font-weight:700; line-height:1; transition:color .4s; }
+  .card-value.warn   { color:var(--warn); }
+  .card-value.danger { color:var(--danger); }
+  .card-unit { font-size:18px; color:var(--muted); font-weight:400; margin-left:3px; }
 
-  .card-value {
-    font-family: var(--mono);
-    font-size: 38px;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1;
-    transition: color 0.4s;
-  }
-
-  .card-value.warn { color: var(--warn); }
-  .card-value.danger { color: var(--danger); }
-
-  .card-unit {
-    font-size: 16px;
-    color: var(--muted);
-    font-weight: 400;
-    margin-left: 4px;
-  }
+  .card-bar-bg { height:4px; background:var(--border); border-radius:2px; margin:14px 0 10px; }
+  .card-bar    { height:4px; border-radius:2px; background:var(--accent); transition:width .6s, background .4s; width:0%; }
+  .card-bar.warn   { background:var(--warn); }
+  .card-bar.danger { background:var(--danger); }
 
   .card-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 12px;
-    font-size: 11px;
-    font-family: var(--mono);
-    padding: 4px 10px;
-    border-radius: 20px;
-    background: rgba(0,212,170,0.1);
-    color: var(--accent);
-    border: 1px solid rgba(0,212,170,0.2);
-    transition: all 0.4s;
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11px; font-family:var(--mono);
+    padding:4px 10px; border-radius:20px;
+    background:rgba(0,212,170,.1); color:var(--accent);
+    border:1px solid rgba(0,212,170,.2); transition:all .4s;
   }
+  .card-status.warn   { background:rgba(245,158,11,.1); color:var(--warn); border-color:rgba(245,158,11,.2); }
+  .card-status.danger { background:rgba(239,68,68,.1);  color:var(--danger); border-color:rgba(239,68,68,.2); }
 
-  .card-status.warn {
-    background: rgba(245,158,11,0.1);
-    color: var(--warn);
-    border-color: rgba(245,158,11,0.2);
-  }
-
-  .card-status.danger {
-    background: rgba(239,68,68,0.1);
-    color: var(--danger);
-    border-color: rgba(239,68,68,0.2);
-  }
-
-  /* Alert banner */
+  /* ── ALERTA ── */
   #alert-banner {
-    display: none;
-    align-items: center;
-    gap: 12px;
-    background: rgba(239,68,68,0.12);
-    border: 1px solid rgba(239,68,68,0.3);
-    border-radius: 12px;
-    padding: 14px 20px;
-    margin-bottom: 24px;
-    font-size: 14px;
-    color: #fca5a5;
-    animation: fadeIn 0.4s ease;
+    display:none; align-items:center; gap:12px;
+    background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3);
+    border-radius:12px; padding:14px 20px; margin-bottom:20px;
+    font-size:14px; color:#fca5a5; animation:fadeIn .4s ease;
   }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+  .alert-dot { width:8px; height:8px; border-radius:50%; background:var(--danger); animation:pulse 1s infinite; flex-shrink:0; }
 
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  /* ── CHARTS ── */
+  .charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+  @media(max-width:700px){ .charts-grid{grid-template-columns:1fr;} }
 
-  .alert-icon {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--danger);
-    animation: pulse 1s infinite;
-    flex-shrink: 0;
+  .chart-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:20px;
   }
+  .chart-title { font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:16px; }
+  .chart-wrap  { position:relative; height:180px; }
 
-  /* Chart section */
-  .chart-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 24px;
-  }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-  }
-
-  .section-title {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .chart-wrap {
-    position: relative;
-    height: 200px;
-  }
-
-  /* Last update */
-  .last-update {
-    text-align: center;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 12px;
-  }
-
-  /* Footer */
+  /* ── FOOTER ── */
   footer {
-    text-align: center;
-    padding: 24px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
+    text-align:center; padding:20px;
+    font-family:var(--mono); font-size:11px; color:var(--muted);
+    border-top:1px solid var(--border);
   }
 
-  /* Connecting state */
-  .connecting {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    padding: 60px 0;
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 13px;
-  }
-
-  .spinner {
-    width: 32px; height: 32px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  @media (max-width: 600px) {
-    header { padding: 16px 20px; }
-    main { padding: 20px 16px; }
-    .card-value { font-size: 30px; }
-    .logo h1 { font-size: 13px; }
+  @media(max-width:600px){
+    header{padding:12px 16px;}
+    main{padding:16px 14px;}
+    .estado-label{font-size:24px;}
+    .card-value{font-size:34px;}
   }
 </style>
 </head>
@@ -299,64 +177,82 @@
 
 <header>
   <div class="logo">
-    <div class="logo-dot"></div>
-    <div>
-      <h1>SMART LAB MONITOR</h1>
-      <span>Industria 4.0 — ESP32 + IoT</span>
+    <div class="logo-icon">⚗️</div>
+    <div class="logo-text">
+      <h1>LABSENSE IOT</h1>
+      <p>Monitor ambiental en tiempo real · ESP32 + Firebase</p>
     </div>
   </div>
-  <div class="status-badge">
-    <div class="status-dot" id="status-dot"></div>
-    <span id="status-text">Conectando...</span>
+  <div class="header-right">
+    <div class="live-badge">
+      <div class="live-dot" id="live-dot"></div>
+      <span id="live-text">Conectando...</span>
+    </div>
   </div>
 </header>
 
 <main>
 
+  <!-- Estado general -->
+  <div class="estado-general" id="estado-card">
+    <div class="estado-left">
+      <div class="estado-icono" id="estado-icono">🟢</div>
+      <div class="estado-info">
+        <h2>Estado del laboratorio</h2>
+        <div class="estado-label" id="estado-label">Esperando datos...</div>
+        <div class="estado-desc" id="estado-desc">Conectando con el sensor ESP32</div>
+      </div>
+    </div>
+    <div class="estado-right">
+      <div class="estado-time" id="estado-time">--:--:--</div>
+    </div>
+  </div>
+
   <!-- Alerta -->
   <div id="alert-banner">
-    <div class="alert-icon"></div>
+    <div class="alert-dot"></div>
     <span id="alert-text">Alerta detectada</span>
   </div>
 
   <!-- Cards -->
-  <div class="cards" id="cards-container">
-    <div class="connecting">
-      <div class="spinner"></div>
-      <span>Esperando datos del ESP32...</span>
+  <div class="cards">
+    <div class="card" id="card-temp">
+      <div class="card-label">Temperatura</div>
+      <div class="card-value" id="val-temp">--<span class="card-unit">°C</span></div>
+      <div class="card-bar-bg"><div class="card-bar" id="bar-temp"></div></div>
+      <div class="card-status" id="st-temp">Normal</div>
+    </div>
+    <div class="card" id="card-hum">
+      <div class="card-label">Humedad</div>
+      <div class="card-value" id="val-hum">--<span class="card-unit">%</span></div>
+      <div class="card-bar-bg"><div class="card-bar" id="bar-hum"></div></div>
+      <div class="card-status" id="st-hum">Normal</div>
+    </div>
+    <div class="card" id="card-aire">
+      <div class="card-label">Calidad del aire</div>
+      <div class="card-value" id="val-aire">--<span class="card-unit">ppm</span></div>
+      <div class="card-bar-bg"><div class="card-bar" id="bar-aire"></div></div>
+      <div class="card-status" id="st-aire">Normal</div>
     </div>
   </div>
 
-  <!-- Gráfica temperatura -->
-  <div class="chart-section">
-    <div class="section-header">
-      <span class="section-title">Temperatura — últimas lecturas</span>
+  <!-- Gráficas -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Temperatura — últimas lecturas</div>
+      <div class="chart-wrap"><canvas id="chartTemp"></canvas></div>
     </div>
-    <div class="chart-wrap">
-      <canvas id="tempChart"></canvas>
-    </div>
-  </div>
-
-  <!-- Gráfica humedad -->
-  <div class="chart-section">
-    <div class="section-header">
-      <span class="section-title">Humedad — últimas lecturas</span>
-    </div>
-    <div class="chart-wrap">
-      <canvas id="humChart"></canvas>
+    <div class="chart-card">
+      <div class="chart-title">Humedad — últimas lecturas</div>
+      <div class="chart-wrap"><canvas id="chartHum"></canvas></div>
     </div>
   </div>
-
-  <div class="last-update" id="last-update">—</div>
 
 </main>
 
-<footer>
-  Smart Lab Monitor · Digitales III · ESP32 + Firebase + AR.js
-</footer>
+<footer>LabSense IoT · Digitales III · ESP32 + Firebase + AR.js · Industria 4.0</footer>
 
 <script>
-  // ── FIREBASE CONFIG ──────────────────────────────────────────
   const firebaseConfig = {
     apiKey: "AIzaSyDWN9YbdTau_mUEQs50A2fmxtMeGIe4qWo",
     authDomain: "smart-lab-monitor-d758a.firebaseapp.com",
@@ -366,115 +262,122 @@
     messagingSenderId: "89073383808",
     appId: "1:89073383808:web:26ea913952d586af752965"
   };
-
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // ── HISTORIAL ────────────────────────────────────────────────
-  const MAX_HIST = 20;
-  let labels = [], tempHist = [], humHist = [];
+  const MAX = 20;
+  let labels=[], tempH=[], humH=[];
 
-  // ── GRÁFICAS ─────────────────────────────────────────────────
   const chartOpts = (color) => ({
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: '#1e2d4a' }, ticks: { color: '#64748b', font: { family: 'Space Mono', size: 10 } } },
-      y: { grid: { color: '#1e2d4a' }, ticks: { color: '#64748b', font: { family: 'Space Mono', size: 10 } } }
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:'#162340'}, ticks:{color:'#64748b', font:{family:'Space Mono',size:10}}},
+      y:{grid:{color:'#162340'}, ticks:{color:'#64748b', font:{family:'Space Mono',size:10}}}
     },
-    elements: { line: { tension: 0.4 }, point: { radius: 3, hoverRadius: 5 } }
+    elements:{line:{tension:.4}, point:{radius:3, hoverRadius:5}}
   });
 
-  const tempCtx = document.getElementById('tempChart').getContext('2d');
-  const humCtx  = document.getElementById('humChart').getContext('2d');
-
-  const tempChart = new Chart(tempCtx, {
-    type: 'line',
-    data: { labels, datasets: [{ data: tempHist, borderColor: '#00d4aa', backgroundColor: 'rgba(0,212,170,0.08)', fill: true, borderWidth: 2 }] },
-    options: chartOpts('#00d4aa')
+  const cT = new Chart(document.getElementById('chartTemp').getContext('2d'), {
+    type:'line',
+    data:{labels, datasets:[{data:tempH, borderColor:'#00d4aa', backgroundColor:'rgba(0,212,170,.08)', fill:true, borderWidth:2}]},
+    options:chartOpts('#00d4aa')
+  });
+  const cH = new Chart(document.getElementById('chartHum').getContext('2d'), {
+    type:'line',
+    data:{labels, datasets:[{data:humH, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.08)', fill:true, borderWidth:2}]},
+    options:chartOpts('#3b82f6')
   });
 
-  const humChart = new Chart(humCtx, {
-    type: 'line',
-    data: { labels, datasets: [{ data: humHist, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', fill: true, borderWidth: 2 }] },
-    options: chartOpts('#3b82f6')
-  });
-
-  // ── HELPERS ──────────────────────────────────────────────────
-  function getEstado(temp, hum, aire) {
-    if (temp > 35 || aire > 800) return 'danger';
-    if (temp > 30 || hum > 80 || aire > 500) return 'warn';
+  function getEstado(t,h,a) {
+    if(t>35||a>800) return 'danger';
+    if(t>30||h>80||a>500) return 'warn';
     return 'ok';
   }
 
-  function getLabel(estado) {
-    return { ok: 'Normal', warn: 'Precaución', danger: 'Peligro' }[estado];
+  function cls(el, estado) {
+    el.classList.remove('warn','danger');
+    if(estado!=='ok') el.classList.add(estado);
   }
 
-  function renderCards(temp, hum, aire) {
-    const estado = getEstado(temp, hum, aire);
-    const alertBanner = document.getElementById('alert-banner');
-    const alertText   = document.getElementById('alert-text');
+  function update(temp, hum, aire) {
+    const eT = temp>35?'danger':temp>30?'warn':'ok';
+    const eH = hum>80?'warn':'ok';
+    const eA = aire>800?'danger':aire>500?'warn':'ok';
+    const eg  = getEstado(temp,hum,aire);
 
-    if (estado === 'danger') {
-      alertBanner.style.display = 'flex';
-      alertText.textContent = `Alerta: ${temp > 35 ? 'Temperatura crítica (' + temp.toFixed(1) + '°C)' : ''} ${aire > 800 ? 'Calidad del aire crítica (' + aire + ' ppm)' : ''}`.trim();
+    // Cards
+    document.getElementById('val-temp').innerHTML = temp.toFixed(1)+'<span class="card-unit">°C</span>';
+    document.getElementById('val-hum').innerHTML  = hum.toFixed(0)+'<span class="card-unit">%</span>';
+    document.getElementById('val-aire').innerHTML = Math.round(aire)+'<span class="card-unit">ppm</span>';
+
+    // Barras (temp max 50, hum max 100, aire max 1000)
+    document.getElementById('bar-temp').style.width  = Math.min(temp/50*100,100)+'%';
+    document.getElementById('bar-hum').style.width   = Math.min(hum,100)+'%';
+    document.getElementById('bar-aire').style.width  = Math.min(aire/1000*100,100)+'%';
+
+    [{id:'card-temp',e:eT,bar:'bar-temp',st:'st-temp'},
+     {id:'card-hum', e:eH,bar:'bar-hum', st:'st-hum'},
+     {id:'card-aire',e:eA,bar:'bar-aire',st:'st-aire'}
+    ].forEach(c => {
+      cls(document.getElementById(c.id), c.e);
+      cls(document.getElementById(c.bar), c.e);
+      const stEl = document.getElementById(c.st);
+      cls(stEl, c.e);
+      stEl.textContent = c.e==='ok'?'Normal':c.e==='warn'?'Precaución':'Peligro';
+    });
+
+    // Estado general
+    const card  = document.getElementById('estado-card');
+    const icono = document.getElementById('estado-icono');
+    const label = document.getElementById('estado-label');
+    const desc  = document.getElementById('estado-desc');
+    cls(card,''); cls(label,'');
+
+    if(eg==='danger') {
+      card.classList.add('danger'); label.classList.add('danger');
+      icono.classList.add('danger'); icono.classList.remove('warn');
+      icono.textContent='🔴';
+      label.textContent='PELIGRO';
+      desc.textContent='Condiciones críticas detectadas — revisar inmediatamente';
+      document.getElementById('alert-banner').style.display='flex';
+      document.getElementById('alert-text').textContent =
+        (temp>35?`Temperatura crítica: ${temp.toFixed(1)}°C. `:'') +
+        (aire>800?`Calidad del aire crítica: ${Math.round(aire)} ppm.`:'');
+    } else if(eg==='warn') {
+      card.classList.add('warn'); label.classList.add('warn');
+      icono.classList.add('warn'); icono.classList.remove('danger');
+      icono.textContent='🟡';
+      label.textContent='PRECAUCIÓN';
+      desc.textContent='Algunos valores fuera del rango ideal — monitorear';
+      document.getElementById('alert-banner').style.display='none';
     } else {
-      alertBanner.style.display = 'none';
+      icono.classList.remove('warn','danger');
+      icono.textContent='🟢';
+      label.textContent='NORMAL';
+      desc.textContent='Todas las condiciones dentro de rangos seguros';
+      document.getElementById('alert-banner').style.display='none';
     }
 
-    const estadoTemp = temp > 35 ? 'danger' : temp > 30 ? 'warn' : 'ok';
-    const estadoHum  = hum > 80  ? 'warn'   : 'ok';
-    const estadoAire = aire > 800 ? 'danger' : aire > 500 ? 'warn' : 'ok';
+    // Live badge
+    document.getElementById('live-dot').className='live-dot on';
+    document.getElementById('live-text').textContent='En línea';
 
-    document.getElementById('cards-container').innerHTML = `
-      <div class="card ${estadoTemp}">
-        <div class="card-label">Temperatura</div>
-        <div class="card-value ${estadoTemp}">${temp.toFixed(1)}<span class="card-unit">°C</span></div>
-        <div class="card-status ${estadoTemp}">${getLabel(estadoTemp)}</div>
-      </div>
-      <div class="card ${estadoHum}">
-        <div class="card-label">Humedad</div>
-        <div class="card-value ${estadoHum}">${hum.toFixed(0)}<span class="card-unit">%</span></div>
-        <div class="card-status ${estadoHum}">${getLabel(estadoHum)}</div>
-      </div>
-      <div class="card ${estadoAire}">
-        <div class="card-label">Calidad del aire</div>
-        <div class="card-value ${estadoAire}">${Math.round(aire)}<span class="card-unit">ppm</span></div>
-        <div class="card-status ${estadoAire}">${getLabel(estadoAire)}</div>
-      </div>
-    `;
+    // Hora
+    document.getElementById('estado-time').textContent =
+      'Última actualización: ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+    // Charts
+    const now = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    labels.push(now); tempH.push(temp); humH.push(hum);
+    if(labels.length>MAX){labels.shift();tempH.shift();humH.shift();}
+    cT.update(); cH.update();
   }
 
-  function updateCharts(temp, hum) {
-    const now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    labels.push(now);    tempHist.push(temp); humHist.push(hum);
-    if (labels.length > MAX_HIST) { labels.shift(); tempHist.shift(); humHist.shift(); }
-    tempChart.update();
-    humChart.update();
-  }
-
-  // ── FIREBASE LISTENER ────────────────────────────────────────
-  const ref = db.ref('/laboratorio');
-
-  ref.on('value', snap => {
-    const data = snap.val();
-    if (!data) return;
-
-    const temp = parseFloat(data.temperatura) || 0;
-    const hum  = parseFloat(data.humedad)     || 0;
-    const aire = parseFloat(data.calidad_aire) || 0;
-
-    document.getElementById('status-dot').className  = 'status-dot online';
-    document.getElementById('status-text').textContent = 'En línea';
-    document.getElementById('last-update').textContent =
-      'Última actualización: ' + new Date().toLocaleTimeString('es-CO');
-
-    renderCards(temp, hum, aire);
-    updateCharts(temp, hum);
-  }, err => {
-    document.getElementById('status-text').textContent = 'Sin conexión';
-    console.error(err);
+  db.ref('/laboratorio').on('value', snap => {
+    const d = snap.val();
+    if(!d) return;
+    update(parseFloat(d.temperatura)||0, parseFloat(d.humedad)||0, parseFloat(d.calidad_aire)||0);
   });
 </script>
 </body>
