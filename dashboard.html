@@ -206,6 +206,31 @@
     </div>
   </div>
 
+  <!-- Contador de alertas -->
+  <div style="display:flex; gap:12px; margin-bottom:20px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:12px;flex:1;">
+      <span style="font-size:22px;">🔴</span>
+      <div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;">ALERTAS PELIGRO</div>
+        <div style="font-family:var(--mono);font-size:28px;font-weight:700;color:var(--danger);" id="cnt-danger">0</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:12px;flex:1;">
+      <span style="font-size:22px;">🟡</span>
+      <div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;">ALERTAS PRECAUCIÓN</div>
+        <div style="font-family:var(--mono);font-size:28px;font-weight:700;color:var(--warn);" id="cnt-warn">0</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:12px;flex:1;">
+      <span style="font-size:22px;">🟢</span>
+      <div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;">LECTURAS NORMALES</div>
+        <div style="font-family:var(--mono);font-size:28px;font-weight:700;color:var(--accent);" id="cnt-ok">0</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Alerta -->
   <div id="alert-banner">
     <div class="alert-dot"></div>
@@ -259,6 +284,7 @@
 
   const MAX = 20;
   let labels=[], tempH=[], humH=[], aireH=[];
+  let cntDanger=0, cntWarn=0, cntOk=0;
 
   const chartOpts = (color) => ({
     responsive:true, maintainAspectRatio:false,
@@ -287,7 +313,7 @@
   });
 
   function getEstado(t,h,a) {
-    if(t>35||h>80||a>800) return 'danger';
+    if(t>34||h>80||a>800) return 'danger';
     if(t>30||h>70||a>500) return 'warn';
     return 'ok';
   }
@@ -298,7 +324,7 @@
   }
 
   function update(temp, hum, aire) {
-    const eT = temp>35?'danger':temp>30?'warn':'ok';
+    const eT = temp>34?'danger':temp>30?'warn':'ok';
     const eH = hum>80?'danger':hum>70?'warn':'ok';
     const eA = aire>800?'danger':aire>500?'warn':'ok';
     const eg  = getEstado(temp,hum,aire);
@@ -338,7 +364,7 @@
       desc.textContent='Condiciones críticas — revisar inmediatamente';
       document.getElementById('alert-banner').style.display='flex';
       document.getElementById('alert-text').textContent =
-        (temp>35?`Temperatura crítica: ${temp.toFixed(1)}°C. `:'') +
+        (temp>34?`Temperatura crítica: ${temp.toFixed(1)}°C. `:'') +
         (hum>80?`Humedad crítica: ${hum.toFixed(0)}%. `:'') +
         (aire>800?`Calidad del aire crítica: ${Math.round(aire)} ppm.`:'');
     } else if(eg==='warn') {
@@ -352,6 +378,11 @@
       document.getElementById('alert-banner').style.display='none';
     }
 
+    // Contadores
+    if(eg==='danger'){ cntDanger++; document.getElementById('cnt-danger').textContent=cntDanger; }
+    else if(eg==='warn'){ cntWarn++; document.getElementById('cnt-warn').textContent=cntWarn; }
+    else { cntOk++; document.getElementById('cnt-ok').textContent=cntOk; }
+
     document.getElementById('live-dot').className='live-dot on';
     document.getElementById('live-text').textContent='En línea';
     document.getElementById('estado-time').textContent =
@@ -361,4 +392,24 @@
     const now = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     labels.push(now); tempH.push(temp); humH.push(hum); aireH.push(aire);
     if(labels.length>MAX){labels.shift();tempH.shift();humH.shift();aireH.shift();}
-    c
+    cT.update(); cH.update(); cA.update();
+  }
+
+  async function fetchData() {
+    try {
+      const res = await fetch(DB_URL);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const d = await res.json();
+      if(!d) return;
+      update(parseFloat(d.temperatura)||0, parseFloat(d.humedad)||0, parseFloat(d.calidad_aire)||0);
+    } catch(e) {
+      document.getElementById('live-text').textContent = 'Sin conexión';
+      console.error(e);
+    }
+  }
+
+  fetchData();
+  setInterval(fetchData, 5000);
+</script>
+</body>
+</html>
